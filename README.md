@@ -1,13 +1,6 @@
 # ToolMATH
 
-ToolMATH is a mathematics-oriented tool-use benchmark for evaluating whether a model can select and invoke simple programmatic functions while solving competition-style math problems.
-
-This repository is intended as the public GitHub companion to the released dataset. It includes:
-
-- the `ToolMATH` split and the `ToolMATHHard` split as JSON files,
-- the corresponding Python function implementations for both splits,
-- a script for constructing deterministic distractor sets,
-- and a sample GPT-5-based evaluation script.
+ToolMATH is a math-grounded benchmark for evaluating tool-augmented language models under controlled long-horizon multi-tool reasoning conditions. The benchmark converts stepwise MATH solutions into reusable Python tools with natural-language descriptions and typed input schemas, and evaluates models in tool environments that vary distractor similarity and tool availability.
 
 ## Repository Layout
 
@@ -21,39 +14,58 @@ This repository is intended as the public GitHub companion to the released datas
 ├── scripts/
 │   ├── build_level_distractors.py
 │   └── sample_evaluation_gpt5.py
+├── .gitignore
 └── README.md
 ```
 
-## Dataset Contents
+## Contents of the Dataset
 
-The repository contains two benchmark splits:
+This repository contains the two benchmark splits described in the paper:
 
-- `data/ToolMATH.json`: the main ToolMATH split with `12,369` examples.
-- `data/ToolMATHHard.json`: the harder ToolMATHHard split with `362` examples.
+- `ToolMATH`: `7,699` questions and `12,369` validated tools
+- `ToolMATHHard`: `329` questions and `362` human-authored validated tools
 
-Each dataset record contains:
+The files are organized as follows:
+
+- `data/ToolMATH.json`: the main ToolMATH tool metadata file
+- `data/ToolMATHHard.json`: the ToolMATHHard tool metadata file
+- `data/function_ToolMATH/`: Python implementations referenced by `ToolMATH.json`
+- `data/function_ToolMATHHard/`: Python implementations referenced by `ToolMATHHard.json`
+
+Each JSON record contains:
 
 - `name`: tool or function name
-- `description`: natural-language tool description
-- `inputs`: argument schema
+- `description`: natural-language description of the tool
+- `inputs`: typed input schema
 - `function`: Python filename implementing the tool
 - `source_problem`: source math problem
 - `source_solution`: reference solution for the source problem
 - `level`: problem difficulty
 - `type`: math category
 
-The `function` field points to a file in the matching implementation directory:
+The `function` field points to a Python file in the corresponding implementation directory for that split.
 
-- `data/ToolMATH.json` pairs with `data/function_ToolMATH/`
-- `data/ToolMATHHard.json` pairs with `data/function_ToolMATHHard/`
+## Setup or Requirements
 
-## Scripts
+Suggested environment:
 
-### `scripts/build_level_distractors.py`
+```bash
+pip install datasets openai
+```
 
-Builds deterministic distractor sets with 100 distractor tools per level for each problem.
+External resources used by the included scripts:
 
-Current behavior:
+- the Hugging Face `datasets` package is used to load `qwedsacf/competition_math`
+- `OPENAI_API_KEY` is required for embedding generation in distractor construction
+- `OPENAI_API_KEY` is also the default key used by the sample evaluation script
+
+If you want to run multi-worker evaluation, you can pass a comma-separated list of environment variable names via `--api-key-vars` and export the matching keys.
+
+## Building Deterministic Distractors
+
+The script [build_level_distractors.py](/data4/hyeonjechoi/math_predefined/Test_MATH/public_repo/scripts/build_level_distractors.py:1) constructs deterministic distractor sets for the main ToolMATH split.
+
+It builds `100` distractor tools per problem for each of five levels:
 
 - `level1`: random distractors excluding same-category tools
 - `level2`: pure random distractors
@@ -61,41 +73,37 @@ Current behavior:
 - `level4`: embedding-ranked distractors
 - `level5`: keyword-overlap plus embedding-ranked distractors
 
-Default inputs and outputs:
+The script uses:
 
-- input dataset: `data/ToolMATH.json`
-- output distractors file: `data/distractors_by_level.json`
+- input tool file: `data/ToolMATH.json`
+- output distractor file: `data/distractors_by_level.json`
 - embedding cache: `data/emb_cache.jsonl`
 
 Example:
 
 ```bash
+export OPENAI_API_KEY=YOUR_KEY
 python scripts/build_level_distractors.py
 ```
 
-Requirements:
+This matches the deterministic distractor construction described in the paper: for each problem and each level, an ordered list of 100 distractors is built once and reused so that smaller `k` settings are prefixes of larger ones.
 
-- `OPENAI_API_KEY` must be set for embedding generation
-- the Hugging Face `datasets` package is used to load `qwedsacf/competition_math`
+## Evaluation
 
-### `scripts/sample_evaluation_gpt5.py`
+The script [sample_evaluation_gpt5.py](/data4/hyeonjechoi/math_predefined/Test_MATH/public_repo/scripts/sample_evaluation_gpt5.py:1) is a sample evaluation script for running a GPT-5-style ReAct setup on ToolMATH with gold tools plus top-`K` distractors.
 
-Runs a sample ReAct-style evaluation using:
+By default it uses:
 
-- gold tools,
-- top-K distractors from a precomputed distractor file,
-- a solver model such as `gpt-5`,
-- and a judge model such as `gpt-4o-mini`
-
-Default inputs and outputs:
-
-- distractors file: `data/distractors_by_level.json`
-- tool implementation directory: `data/function_ToolMATH/`
-- output JSON: `results/sample_evaluation_gpt5.json`
+- one worker
+- one API key from `OPENAI_API_KEY`
+- distractors from `data/distractors_by_level.json`
+- tool implementations from `data/function_ToolMATH/`
+- output path `results/sample_evaluation_gpt5.json`
 
 Example:
 
 ```bash
+export OPENAI_API_KEY=YOUR_KEY
 python scripts/sample_evaluation_gpt5.py \
   --distractors-json data/distractors_by_level.json \
   --tools-dir data/function_ToolMATH \
@@ -105,9 +113,10 @@ python scripts/sample_evaluation_gpt5.py \
   --out results/sample_evaluation_gpt5_l1_k100.json
 ```
 
-Optional no-gold ablation:
+Optional Distractors-only style ablation:
 
 ```bash
+export OPENAI_API_KEY=YOUR_KEY
 python scripts/sample_evaluation_gpt5.py \
   --distractors-json data/distractors_by_level.json \
   --tools-dir data/function_ToolMATH \
@@ -118,27 +127,7 @@ python scripts/sample_evaluation_gpt5.py \
   --out results/sample_evaluation_gpt5_l1_k100_nogold.json
 ```
 
-Requirements:
-
-- by default, set `OPENAI_API_KEY` for a single-worker run
-- if you want multiple workers, pass additional variable names via `--api-key-vars`
-- the Hugging Face `datasets` package is used to load `qwedsacf/competition_math`
-
-## Setup
-
-Suggested environment:
-
-```bash
-pip install datasets openai
-```
-
-For the default single-worker configuration:
-
-```bash
-export OPENAI_API_KEY=YOUR_KEY
-```
-
-If you want to run multiple workers, pass a comma-separated list through `--api-key-vars` and export the matching variables.
+This sample script is not the full evaluation suite from the paper. It is included as a minimal public example of the benchmark interface and a reference implementation for gold-present and distractors-only style conditions.
 
 ## Source Attribution
 
@@ -165,9 +154,7 @@ References:
 - MATH repository: https://github.com/hendrycks/math
 - MATH paper: https://arxiv.org/abs/2103.03874
 
-If you use ToolMATH, cite the ToolMATH release and the original MATH paper when relevant.
-
-## License
+If you use ToolMATH, cite both the ToolMATH release and the original MATH paper when relevant.
 
 Dataset files in this repository are intended to be distributed under `CC-BY-SA-4.0`.
 
