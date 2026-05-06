@@ -121,10 +121,9 @@ python scripts/sample_evaluation_gpt5.py \
   --distractors-json data/distractors_by_level.json \
   --tools-dir data/function_ToolMATH \
   --level 1 \
-  --k 100 \
   --num-examples 200 \
   --no-gold-tools \
-  --out results/sample_evaluation_gpt5_l1_k100_nogold.json
+  --out results/sample_evaluation_gpt5_l1_nogold.json
 ```
 
 This sample script is not the full evaluation suite from the paper. It is included as a minimal public example of the benchmark interface and a reference implementation for gold-present and distractors-only style conditions.
