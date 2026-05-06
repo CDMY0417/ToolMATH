@@ -45,9 +45,9 @@ Each JSON record contains:
 
 The `function` field points to a Python file in the corresponding implementation directory for that split.
 
-## Setup or Requirements
+## Requirements and Setups
 
-Suggested environment:
+Below are the suggested environment:
 
 ```bash
 pip install datasets openai
