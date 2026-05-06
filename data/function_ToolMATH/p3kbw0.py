@@ -1,0 +1,2 @@
+def linear_function_h(a: int, b: int, x: int) -> int:
+    return a * x + b

@@ -1,0 +1,3 @@
+def midpoint_of_two_points(x1: float, y1: float, x2: float, y2: float):
+    """Return midpoint (x,y)."""
+    return [(x1 + x2) / 2.0, (y1 + y2) / 2.0]

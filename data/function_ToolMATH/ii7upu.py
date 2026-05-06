@@ -1,0 +1,2 @@
+def difference_between_areas_a(area1: float, area2: float) -> float:
+    return area1 - area2

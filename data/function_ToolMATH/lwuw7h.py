@@ -1,0 +1,3 @@
+def compute_gcd_d(a: int, b: int, c: int) -> int:
+    from math import gcd
+    return gcd(gcd(a, b), c)

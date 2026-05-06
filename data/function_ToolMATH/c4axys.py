@@ -1,0 +1,2 @@
+def evaluate_linear(a: int, b: int, x: int) -> int:
+    return a * x + b

@@ -1,0 +1,3 @@
+def choose_b(n: int, k: int):
+    from math import comb
+    return comb(n, k)

@@ -1,0 +1,2 @@
+def sum_of_pascals_triangle_row(n: int) -> int:
+    return 2 ** n

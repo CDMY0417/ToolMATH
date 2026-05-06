@@ -1,0 +1,2 @@
+def reduce_modulo_a(number: int, modulus: int) -> int:
+    return number % modulus
