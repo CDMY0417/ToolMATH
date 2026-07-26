@@ -13,7 +13,15 @@ ToolMATH is a math-grounded benchmark for evaluating tool-augmented language mod
 │   └── function_ToolMATHHard/
 ├── scripts/
 │   ├── build_level_distractors.py
-│   └── sample_evaluation_gpt5.py
+│   ├── strict_equiv_tool_stats.py
+│   ├── eval_core.py
+│   ├── evaluation_gpt4o.py
+│   ├── evaluation_gpt5.py
+│   ├── evaluation_llama3_8b.py
+│   ├── evaluation_qwen2_5_7b.py
+│   ├── evaluation_sonnet_4_6.py
+│   └── evaluation_gemini_3_1_pro.py
+├── results/
 ├── .gitignore
 └── README.md
 ```
@@ -88,45 +96,100 @@ python scripts/build_level_distractors.py
 
 This matches the deterministic distractor construction described in the paper: for each problem and each level, an ordered list of 100 distractors is built once and reused so that smaller `k` settings are prefixes of larger ones.
 
-## Evaluation
+### Optional Strict-Equivalent Exclusion Mode
 
-The script [sample_evaluation_gpt5.py](/data4/hyeonjechoi/math_predefined/Test_MATH/public_repo/scripts/sample_evaluation_gpt5.py:1) is a sample evaluation script for running a GPT-5-style ReAct setup on ToolMATH with gold tools plus top-`K` distractors.
+You can also build distractors while excluding tools that are judged to be strictly equivalent to any gold tool for the same problem.
 
-By default it uses:
-
-- one worker
-- one API key from `OPENAI_API_KEY`
-- distractors from `data/distractors_by_level.json`
-- tool implementations from `data/function_ToolMATH/`
-- output path `results/sample_evaluation_gpt5.json`
-
-Example:
+First, build the strict-equivalence statistics:
 
 ```bash
 export OPENAI_API_KEY=YOUR_KEY
-python scripts/sample_evaluation_gpt5.py \
-  --distractors-json data/distractors_by_level.json \
+python scripts/strict_equiv_tool_stats.py \
+  --tool-json data/ToolMATH.json \
   --tools-dir data/function_ToolMATH \
+  --out-json data/strict_equiv_tool_stats.json \
+  --out-csv data/strict_equiv_tool_stats.csv
+```
+
+Then pass the resulting JSON into the distractor builder:
+
+```bash
+export OPENAI_API_KEY=YOUR_KEY
+python scripts/build_level_distractors.py \
+  --tool-json data/ToolMATH.json \
+  --out data/distractors_by_level_no_strict_equiv.json \
+  --exclude-strict-equiv \
+  --strict-equiv-json data/strict_equiv_tool_stats.json
+```
+
+The same flow works for `ToolMATHHard` by changing:
+
+- `--tool-json data/ToolMATHHard.json`
+- `--out data/distractors_by_level_toolmathhard.json`
+- `--tools-dir data/function_ToolMATHHard`
+- optional strict-equivalence outputs such as `data/strict_equiv_tool_stats_toolmathhard.json`
+
+## Evaluation
+
+The `scripts/` directory now includes direct evaluation entrypoints for multiple models:
+
+- `evaluation_gpt4o.py`
+- `evaluation_gpt5.py`
+- `evaluation_llama3_8b.py`
+- `evaluation_qwen2_5_7b.py`
+- `evaluation_sonnet_4_6.py`
+- `evaluation_gemini_3_1_pro.py`
+
+All of them share the same evaluation logic and accept the same main arguments:
+
+- `--tool-json`: selects `ToolMATH.json` or `ToolMATHHard.json`
+- `--tools-dir`: selects `data/function_ToolMATH/` or `data/function_ToolMATHHard/`
+- `--distractors-json`: selects the prebuilt distractor file
+- `--level`: distractor difficulty level
+- `--k`: number of distractors to prepend from the ranked list
+
+Example for ToolMATH:
+
+```bash
+export OPENAI_API_KEY=YOUR_KEY
+python scripts/evaluation_gpt5.py \
+  --tool-json data/ToolMATH.json \
+  --tools-dir data/function_ToolMATH \
+  --distractors-json data/distractors_by_level.json \
   --level 1 \
   --k 100 \
   --num-examples 200 \
-  --out results/sample_evaluation_gpt5_l1_k100.json
+  --out results/evaluation_gpt5_toolmath_l1_k100.json
 ```
 
-Optional Distractors-only style ablation:
+Example for ToolMATHHard:
 
 ```bash
 export OPENAI_API_KEY=YOUR_KEY
-python scripts/sample_evaluation_gpt5.py \
-  --distractors-json data/distractors_by_level.json \
-  --tools-dir data/function_ToolMATH \
-  --level 1 \
-  --num-examples 200 \
-  --no-gold-tools \
-  --out results/sample_evaluation_gpt5_l1_nogold.json
+python scripts/evaluation_gpt5.py \
+  --tool-json data/ToolMATHHard.json \
+  --tools-dir data/function_ToolMATHHard \
+  --distractors-json data/distractors_by_level_toolmathhard.json \
+  --level 3 \
+  --k 5 \
+  --out results/evaluation_gpt5_toolmathhard_l3_k5.json
 ```
 
-This sample script is not the full evaluation suite from the paper. It is included as a minimal public example of the benchmark interface and a reference implementation for gold-present and distractors-only style conditions.
+Distractors-only ablation:
+
+```bash
+export OPENAI_API_KEY=YOUR_KEY
+python scripts/evaluation_gpt5.py \
+  --tool-json data/ToolMATH.json \
+  --tools-dir data/function_ToolMATH \
+  --distractors-json data/distractors_by_level.json \
+  --level 1 \
+  --k 100 \
+  --no-gold-tools \
+  --out results/evaluation_gpt5_toolmath_l1_k100_nogold.json
+```
+
+For non-OpenAI models, use the corresponding script and configure any required OpenAI-compatible endpoint externally, for example via `OPENAI_BASE_URL` and an API key exposed through `OPENAI_API_KEY`.
 
 ## Source Attribution
 
