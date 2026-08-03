@@ -71,7 +71,7 @@ If you want to run multi-worker evaluation, you can pass a comma-separated list 
 
 ## Building Deterministic Distractors
 
-The script [build_level_distractors.py](/data4/hyeonjechoi/math_predefined/Test_MATH/public_repo/scripts/build_level_distractors.py:1) constructs deterministic distractor sets for the main ToolMATH split.
+The script [build_level_distractors.py](https://github.com/CDMY0417/ToolMATH/blob/main/scripts/build_level_distractors.py) constructs deterministic distractor sets for the main ToolMATH split.
 
 It builds `100` distractor tools per problem for each of five levels:
 
